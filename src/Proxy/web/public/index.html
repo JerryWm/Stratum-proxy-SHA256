@@ -1,0 +1,540 @@
+﻿
+<head>
+
+	<script src="lib/jquery/jquery-3.2.1.min.js"></script>
+	
+	
+	<title>Stratum proxy</title>
+	
+
+	<script src="lib/popper/1.12.3/umd/popper.min.js"></script>
+
+	<link  href="lib/bootstrap-4.0.0-beta.2/css/bootstrap.min.css" rel="stylesheet" >
+	<script src="lib/bootstrap-4.0.0-beta.2/js/bootstrap.min.js"></script>
+
+	<link rel="stylesheet" type="text/css" href="lib/datatable/css/style.css"/>
+	<script type="text/javascript" src="lib/datatable/js/datatables.min.js"></script>
+
+	<script type="text/javascript" src="lib/noty/noty.min.js" ></script>
+	<link rel="stylesheet" type="text/css" href="lib/noty/noty.css">
+
+	
+	<!--
+	<link rel="stylesheet" type="text/css" href="lib/mdl/material.min.css">
+	<script type="text/javascript" src="lib/mdl/material.min.js" ></script>
+	-->
+	
+	<script type="text/javascript" src="lib/socket.io/socket.io.js" ></script>
+	
+	<script type="text/javascript" src="lib/vue/vue.js" ></script>
+	
+	<script type="text/javascript" src="lib/require/require.js" ></script>
+	
+</head>
+
+
+<body>
+
+
+
+
+	<header class="navbar">
+		<nav class="nav nav-tabs fixed-top bg-white" id="myTab" role="tablist">
+			<a class="nav-item nav-link active" id="nav-1-tab" data-toggle="tab" href="#nav-target-1" role="tab" aria-controls="nav-target-1" aria-selected="true">Workers</a>
+			<a class="nav-item nav-link"        id="nav-5-tab" data-toggle="tab" href="#nav-target-5" role="tab" aria-controls="nav-target-5" aria-selected="false">Pools</a>
+			<a class="nav-item nav-link"        id="nav-4-tab" data-toggle="tab" href="#nav-target-4" role="tab" aria-controls="nav-target-4" aria-selected="false">Jobs</a>
+			<a class="nav-item nav-link"        id="nav-2-tab" data-toggle="tab" href="#nav-target-2" role="tab" aria-controls="nav-target-2" aria-selected="false">Shares</a>
+			<a class="nav-item nav-link"        id="nav-3-tab" data-toggle="tab" href="#nav-target-3" role="tab" aria-controls="nav-target-3" aria-selected="false">Console</a>
+			
+			<a class="nav-item nav-link"        id="nav-6-tab" data-toggle="tab" href="#nav-target-6" role="tab" aria-controls="nav-target-6" aria-selected="false">Settings</a>
+			
+			
+			<!-- <a class="nav-item nav-link flex-row ml-md-auto d-none d-md-flex global-hash-rate-wrap"  >Hash rate[5s/60s/5m/15m/30m/60m]: <div class="global-hash-rate"></div></a> -->
+		</nav>
+		
+		<div class="fixed-top" style="" >
+			<div id="global-workers-summary-hash-rate-cnt" style="width: auto; left: 500px; position: absolute; top: 0px; height: 46px; overflow-y: hidden;">
+				<span data-popover-focus-model="out-click" class="badge badge-success" style="margin: 4px; padding: 10px; cursor: pointer;">Summary hash rate 
+					<span class="badge badge-light" style="padding: 6px; margin: -4px 0px -4px 0px;" >{{hash_rate}}</span>
+				</span>
+				
+				<span data-popover-focus-model="out-click" class="badge badge-warning" style="margin: 4px; padding: 10px; cursor: pointer;" v-show="dev_time" >Dev fee time</span>
+			</div>
+		</div>
+		
+		<div class="fixed-top" style="" >
+			<div id="global-hash-rate-cnt" style="width: auto; right: 0px; position: absolute; top: -5px; height: 46px; overflow-y: hidden;">
+			
+				<table class="display table-sm tb-hash-rate table-light table-dark ">
+				</table>
+				
+			</div>
+		</div>
+	</header>
+
+
+
+
+
+	<div class="tab-content" id="nav-tabContent">	
+		<div class="tab-pane fade show active width: 100%;" id="nav-target-1" role="tabpanel" aria-labelledby="nav-1-tab">
+			<table class="display table table-hover table-dark" id="worker-list" cellspacing="0"  width="100%" >
+				<thead>
+					<tr>
+						<th>#</th>
+						<th>Pool info</th>
+						<th>Address</th>
+						<th>Agent</th>
+						<th>Login</th>
+						<th>Password</th>
+						<th>Jobs</th>
+						<th>A/R shares</th>
+						<th>Shares</th>
+						<th>Hashes</th>
+						<th>Hashrate</th>
+						<th>Time in work</th>
+						<th>Connection time</th>
+						<th>Disconnection time</th>
+					</tr>
+				</thead>
+				<tbody></tbody>
+			</table>
+		</div>
+		
+		<div class="tab-pane fade" id="nav-target-2" role="tabpanel" aria-labelledby="nav-2-tab">
+	  
+			<table class="display table table-hover table-dark" id="share-list" cellspacing="0"  width="100%" >
+				<thead>
+				<tr>
+				  <th>#</th>
+				  <th>Pool info</th>
+				  <th>Worker info</th>
+				  <th>Job info</th>
+				  <th>Diff</th>
+				  <th>Diff real</th>
+				  <th>Block height</th>
+				  <th>Hash</th>
+				  <th>Status</th>
+				  <th>Time in work</th>
+				  <th>Time start</th>
+				  <th>Time end</th>
+				</tr>
+				</thead>
+				<tbody></tbody>  
+			</table>
+
+		</div>
+
+		<div class="tab-pane fade" id="nav-target-4" role="tabpanel" aria-labelledby="nav-4-tab">
+			<table class="display table table-hover table-dark" id="job-list" cellspacing="0"  width="100%" >
+				<thead>
+					<tr>
+					  <th>#</th>
+					  <th>Pool info</th>
+					  <th>Job id</th>
+					  <th>A/R shares</th>
+					  <th>Workers</th>
+					  <th>Diff</th>
+					  <th>Diff real</th>
+					  <th>Block height</th>
+					  <th>Time in work</th>
+					  <th>Time start</th>
+					  <th>Time end</th>
+					</tr>
+				</thead>
+				<tbody></tbody>  
+			</table>
+		</div>
+		
+		<div class="tab-pane fade" id="nav-target-5" role="tabpanel" aria-labelledby="nav-5-tab">
+			<table class="display table table-hover table-dark" id="pool-list" cellspacing="0"  width="100%" >
+				<thead>
+					<tr>
+					  <th>#</th>
+					  <th>Address</th>
+					  <th>Diff</th>
+					  <th>Diff real</th>
+					  <th>Workers</th>
+					  <th>Jobs</th>
+					  <th>A/R shares</th>
+					  <th>Hashes</th>
+					  <th>Hashrate [CR/5m/10m/15m/30m/60m/ALL]</th>
+					  <th>Ping(msec)</th>
+					  <th>Time in work</th>
+					  <th>Connection time</th>
+					  <th>Disconnection time</th>
+					</tr>
+				</thead>
+				<tbody></tbody>  
+			</table>
+		</div>
+		
+		<div class="tab-pane fade" id="nav-target-3" role="tabpanel" aria-labelledby="nav-3-tab">
+			<table class="display table table-hover table-dark" id="log-list" cellspacing="0"  width="100%" >
+				<thead>
+				<tr>
+				  <th>#</th>
+				  <th>Time</th>
+				  <th>Log</th>
+				</tr>
+				</thead>
+				<tbody></tbody>  
+			</table>
+		</div>
+
+		<div class="tab-pane fade" id="nav-target-6" role="tabpanel" aria-labelledby="nav-6-tab">
+			
+			<div class="app-settings-cnt">
+
+				<ul class="nav nav-tabs" role="tablist">
+					<li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#settings-a" role="tab">Pools</a></li>
+					<!--<li class="nav-item"><a class="nav-link " data-toggle="tab" href="#worker-mng" role="tab">Worker Management</a></li>-->
+					<li class="nav-item"><a class="nav-link " data-toggle="tab" href="#dev-fee" role="tab">Dev fee</a></li>
+				</ul>
+
+				<div class="tab-content">
+				
+					<div class="tab-pane active" id="settings-a" role="tabpanel">
+					
+						<div id="app-settings" >
+							<settings-pool 
+								v-for="(pool, id) in pools"
+								v-bind="pool"
+								v-bind:id="id"
+								v-bind:pool_lock="lock"
+								v-bind:keepalive_enable="pool.keepalive!==null && pool.keepalive!==undefined"
+								v-on:pool="updatePool($event)"
+								v-on:command="onCommandPool($event)"
+							></settings-pool>
+							
+							<button class="btn" v-bind:disabled="lock" v-on:click="onCommandPool({cmd:'add_pool', id: null})">Add pool</button>
+						</div>				
+					
+					</div>
+					
+					<div class="tab-pane" id="worker-mng" role="tabpanel">
+					
+						<table class="table" id="app-settings-workers">
+							<thead>
+								<tr>
+								
+									<td>#</td>
+									
+									<td>Name</td>
+									<td>Address</td>
+									<td>State</td>
+									<td>Worker path</td>
+									<td>Hashrate</td>
+									
+									<td>Thread count</td>
+									<td>Process priority</td>
+									<td>Thread priority</td>
+									
+									<td>Control</td>
+									
+								</tr>
+							</thead>
+							
+							<tbody>
+							
+								<tr
+									v-for="(worker, id) in workers"
+									v-on:pool="updatePool($event)"
+									v-on:command="onCommandPool($event)"
+								>
+									<td>{{ worker.id }}</td>
+									<td>
+										<input type="text" v-model.trim="worker.name" v-bind:disabled="worker.lock" v-on:input="onInputText_Name($event, worker)" class="form-control">
+									</td>
+									<td>{{ worker.address }}</td>
+									<td>
+										<div class="auth-badge-invalid">
+											<span 
+												v-on:click="onClickBtn_ShowInfo($event, worker)"
+												class="badge" 
+												data-popover-focus-model="out-click"
+												v-bind:class="[
+													worker.state == 'working' ? 'badge-success' : '',
+													worker.state == 'stopped' ? 'badge-danger'  : '',
+												]" 	
+												style="padding: 8px; cursor: pointer;" >{{ worker.state_selftest ? worker.state_selftest : worker.state }}</span>
+										</div>
+									</td>
+									
+									<td>{{ worker.worker_path }}</td>
+									
+									<td>{{ worker.hash_rate ? worker.hash_rate.toFixed(1) : "n/a" }}</td>
+									
+									<td>
+										<select v-bind:disabled="worker.lock" class="form-control form-control-sm  form-cst" v-model="worker.thread_count" v-on:input="onInputSelect($event, worker, 'thread_count')" >
+											<option
+												v-for="selProcCount in worker.cpu_count"
+												v-bind:value="selProcCount"
+											>
+												{{ selProcCount }}
+											</option>
+										</select>
+									</td>
+									
+									<td>
+										<select v-bind:disabled="worker.lock" class="form-control form-control-sm  form-cst" v-model="worker.process_priority" v-on:input="onInputSelect($event, worker, 'process_priority')" >
+											<option
+												v-for="(prio) in process_priority_map"
+												v-bind:value="prio.id"
+											>
+												{{ prio.name }}
+											</option>
+										</select>
+									</td>
+
+									<td>
+										<select v-bind:disabled="worker.lock" class="form-control form-control-sm  form-cst" v-model="worker.thread_priority" v-on:input="onInputSelect($event, worker, 'thread_priority')" >
+											<option
+												v-for="(prio) in thread_priority_map"
+												v-bind:value="prio.id"
+											>
+												{{ prio.name }}
+											</option>
+										</select>
+									</td>
+									
+									<td>
+										<button type="button" class="btn" v-bind:disabled="worker.lock" v-on:click="onClickBtn_StartStop($event, worker)"
+											v-bind:class="[
+												worker.state == 'stopped' ? 'btn-success' : '',
+												worker.state == 'working' ? 'btn-danger'  : '',
+											]" 
+										>
+											{{ worker.state == "working" ? "Stop"  : "" }}
+											{{ worker.state == "stopped" ? "Start" : "" }}
+										</button>
+										
+										<button type="button" class="btn btn-warning" v-bind:disabled="worker.lock" v-on:click="onClickBtn_Selftest($event, worker)" >Selftest</button>
+									</td>
+								</tr>	
+								
+							</tbody>
+						</table>						
+					
+					</div>
+					
+					<div class="tab-pane " id="dev-fee" role="tabpanel">
+					
+						<div id="dev-fee-settings" style="padding: 20px; width: 100px;" >
+							<select class="form-control form-control-sm form-cst" v-model="dev_fee" v-on:input="changeDevFee($event.target.value)" >
+								<option
+									v-bind:disabled="lock"
+									v-for="(opt) in dev_fee_map"
+									v-bind:value="opt.value"
+								>
+									{{ opt.name }}
+								</option>
+							</select>
+						</div>				
+					
+					</div>
+					
+				</div>			
+			</div>
+			
+			<style>
+			.form-cst {
+			}
+			#worker-mng table td {
+				vertical-align: middle;
+			}
+			.table-workers-system-info * {
+				padding: 0px 5px 0px 5px !important;
+			}
+			</style>
+			
+		</div>
+
+	</div>
+		
+	<style>
+	.settings-pool-cnt {
+		//border: 1px solid #440;
+		padding: 5px;
+	}
+	.settings-pool-cnt > * {
+		margin-top: 5px;
+		width: 100%;
+	}
+	.btn {
+		cursor: pointer;
+	}
+	
+	.settings-pool {
+		padding: 5px;
+	}
+	.settings-pool > div {
+		padding: 5px;
+	}
+	.settings-pool-sm-options > div {
+		padding: 5px;
+	}
+	
+	#settings-a {
+		padding: 10px;
+	}
+	.app-settings-cnt {
+		padding: 20px;
+	}
+	</style>
+	
+	
+	
+	
+	
+	
+	
+	
+	<div class="modal" tabindex="-1" role="dialog" id="modal-login">
+		<div class="modal-dialog" role="document">
+			<div class="modal-content">
+				<div class="modal-header"><h5 class="modal-title">Login</h5></div>
+		  
+				<div class="modal-body">
+					<div class="auth-badge-invalid" style="display: none; padding: 8px;" >
+						<span class="badge badge-danger">Invalid auth key</span>
+					</div>
+					
+					<div class="input-group" >
+						<span class="input-group-addon" >Auth key</span>
+						<input type="text" class="form-control auth-input-auth-key" placeholder="secret key" >
+					</div>
+				</div>
+		  
+				<div class="modal-footer">
+					<button type="button" class="btn btn-primary auth-btn-save" >Save</button>
+				</div>
+			</div>
+		</div>
+	</div>	
+	<div class="modal" tabindex="-1" role="dialog" id="modal-restart">
+	  <div class="modal-dialog" role="document">
+		<div class="modal-content">
+		  <div class="modal-header">
+			<h5 class="modal-title">Restart...</h5>
+			<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+			  <span aria-hidden="true">&times;</span>
+			</button>
+		  </div>
+		  <div class="modal-body">
+			<p>The proxy server is rebooted. Restart.</p>
+		  </div>
+		  <div class="modal-footer">
+			<button type="button" class="btn btn-primary btn-restart" onclick="window.location.reload()" >Restart</button>
+			<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+		  </div>
+		</div>
+	  </div>
+	</div>	
+	
+	
+	
+	<style>
+	body {
+		margin-top: 56px;
+	}
+
+	.tb-hash-rate {
+		font-size: 12px;
+	}
+
+	#console-line-list {
+		font-size: 12px;
+	}
+	#console-line-list tbody * {
+		padding: 5px;
+	}
+
+	.dataTables_scrollHead * {
+		font-size: 12px;
+	}
+
+
+	#done-hash-list, #worker-list, #job-list, #pool-list {
+		font-size: 12px;
+	}
+
+	.popover * {
+		font-size: 12px;
+	}
+
+	.global-hash-rate-wrap {
+		font-size: 12px;
+	}
+	.global-hash-rate .hash_rate_table {
+		width: 300px;
+	}
+	.global-hash-rate span {
+		margin-left: 5px;
+		font-size: 12px;
+	}
+	.hash_rate_table {
+		margin: 0px;
+		padding: 0px;
+		width: 250px;
+	}
+	.hash_rate_table span {
+		display: block;
+		float: left;	
+		width: 40px;
+	}
+
+	#show-gb-hash-rate {
+		right: 0px;
+	}
+	#show-gb-hash-rate * {
+		font-size: 12px;
+	}
+
+	thead *, tbody * {
+		font-size: 10px !important;
+	}
+	
+	
+	.hrtb {
+		display: table;
+		background: #FFF;
+		width: 100%;
+		padding-left: 5px;
+		padding-right: 5px;
+	}
+	.hrtb > div {
+		display: table-row;
+	}
+	.hrtb > div > div {
+		display: table-cell;
+		font-size: 8px;
+		//margin: 5px;
+		padding-left: 2px;
+		padding-right: 2px;
+		//border: 1px dotted white;	
+		color: #000;
+	}
+	</style>
+
+	<script>
+
+	requirejs.config({
+		baseUrl: "/",
+		paths: {
+			//jquery: "/lib/jquery/jquery-3.2.1.min",
+			socketio: "/lib/socket.io/socket.io"
+		}
+	});
+
+	require(["app/Main"], function(Main) {
+		$(function() {
+			var main = new Main();
+		});
+	});
+
+	</script>
+
+ 
+
+</body>

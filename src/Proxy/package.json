@@ -1,0 +1,19 @@
+{
+
+  "main": "./Main.js",
+
+  "author": "Jerry",
+  
+  "dependencies": {
+    "socketio": "latest"
+  },
+  
+  "name": "stratum-proxy",
+  
+  "description": "Stratum proxy",
+  
+  "keywords": [],
+
+  "version": "1.0.0"
+  
+}
