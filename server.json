@@ -1,0 +1,39 @@
+{
+	
+	servers: [
+	
+		{
+			bind_address: "0.0.0.0:4444",
+			ssl: false,
+			
+			min_difficulty: 1000,
+			max_difficulty: 32000,
+			max_extranonce2_size: 4,
+		},
+		
+		{
+			bind_address: "0.0.0.0:1443",
+			ssl: true,
+			
+			min_difficulty: 1000,
+			max_difficulty: 32000,
+			max_extranonce2_size: 4,
+		},
+		
+	],
+	
+	web_server: {
+		//	enable
+		enable: true,
+		
+		//	bind web server address
+		bind_address: "0.0.0.0:8000",
+		
+		//	secret key
+		auth_key: "admin",
+		
+		// open browser
+		open_browser: false,
+	},
+
+}
