@@ -161,6 +161,21 @@ Common.parseInteger = (n, def, min, max) => {
 	});
 }
 
+Common.parseStringFilter = (s, options) => {
+	let t = typeof s;
+
+	if ( t === "string" || t === "number" ) {
+		s = String(s);
+	} else {
+		s = options.def;
+	}
+	
+	return s;
+}
+Common.parseString = (s, def = "") => {
+	return Common.parseStringFilter(s, {def: def});
+}
+
 Common.checkHex = function(hex, min_len, max_len) {
 	if ( !Common.checkString(hex, min_len, max_len) ) { return false; }
 	if ( hex.length & 1 ) { return false; }
@@ -209,6 +224,112 @@ Common.parseArgv = () => {
 	
 	return map;
 }
+
+Common.parseFloatOrNull = (n) => {
+	if ( typeof n === "number" || typeof n === "string" ) {
+		n = parseFloat(n);
+	} else {
+		n = null;
+	}
+
+	if ( !isFinite(n) ) {
+		n = null;
+	}
+		
+	return n;
+}
+Common.parseIntOrNull = (n) => {
+	n = Common.parseFloatOrNull(n);
+	if ( n !== null ) {
+		n = parseInt(n);
+	}
+	
+	if ( !isFinite(n) ) {
+		n = null;
+	}
+		
+	return n;
+}
+
+class SetInterval {
+	constructor(time_interval_mili_sec) {
+		this.tims = time_interval_mili_sec;
+		
+		this.cb_list = [];
+		
+		this.closed = false;
+		
+		this.iid = setInterval(() => {
+			this.cb_list.map(v => v());
+		}, this.tims);
+	}
+	
+	on(cb) {
+		if ( cb ) {
+			this.cb_list.push(cb);
+		}
+	}
+	
+	stop() {
+		if ( this.closed ) { return; }
+		this.closed = true;
+		clearInterval(this.iid);
+	}
+	
+}
+Common.SetInterval = SetInterval;
+Common.setInterval = (time_mili_sec, cb) => {
+	var closed = false;
+	var next = () => {
+		setTimeout(() => {
+			if ( closed ) {
+				return;
+			}
+			
+			let r = cb();
+			if ( !r ) {
+				return;
+			}
+			next();
+		}, time_mili_sec);
+	};
+	next();
+	
+	return () => {closed = true;}
+}
+
+class SetTimeout {
+	constructor(time_interval_mili_sec) {
+		this.tims = time_interval_mili_sec;
+		
+		this.seq = 1;
+		
+		this.list = Object.create(null);
+	}
+	
+	beforeTimeout() {
+		for(let index in this.list) {
+			this.list[index].cb && this.list[index].cb();
+			clearTimeout(this.list[index].iid);
+		}
+		
+		this.list = Object.create(null);
+	}
+	
+	setTimeout(cb) {
+		var index = this.seq++;
+		this.list[index] = {
+			cb: cb,
+			iid: setTimeout(() => {
+				if ( this.list[index] ) {
+					this.list[index].cb && this.list[index].cb();
+					delete this.list[index];
+				}
+			}, this.tims)
+		};
+	}
+}
+Common.SetTimeout = SetTimeout;
 
 	function doubleFixedStringRemoveLastZeros(s) {
 		return String(s).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");

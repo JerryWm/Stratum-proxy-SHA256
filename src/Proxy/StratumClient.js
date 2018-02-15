@@ -56,10 +56,10 @@ class StratumClient {
 		}
 	}
 	*/
-	constructor(options, events, logger) {
+	constructor(options, events, logger, id = null) {
 		this.prefix = "stratum:client:";
 		this.events = events;
-		this.id = Common.getGlobalUniqueId();
+		this.id = id || Common.getGlobalUniqueId();
 		
 		this.logger = new Logger(logger, "STRATUM-CLIENT #" + this.id);
 
@@ -67,7 +67,7 @@ class StratumClient {
 		this.events.emit(this.prefix + "open", this);
 		this.pool = new StratumConfig(this.logger, options);
 		if ( !this.pool.valid ) {
-			this.events.emit(this.prefix + "close", this);
+			this.events.emit(this.prefix + "close", this, this.pool.error_text);
 			return;
 		}
 		
@@ -75,8 +75,6 @@ class StratumClient {
 		this.jobs = Object.create(null);
 		this.shares_unique = [];
 		this.job = null;
-		
-		
 		
 		this.logger.notice("Attempting to connect to "+this.logPoolInfo(Logger.LOG_COLOR_MAGENTA_LIGHT, Logger.LOG_COLOR_GRAY));
 
@@ -119,7 +117,23 @@ class StratumClient {
 			
 			this.events.emit(this.prefix+"accepted_job", this, pool_job);
 		});
-		
+		this.stratum.on("support:set_extranonce", (fl) => {
+			if ( fl ) {
+				this.logger.success("The pool support the method 'mining.set_extranonce'");
+			} else {
+				this.logger.warning("The pool does not support the method 'mining.set_extranonce'");
+			}
+		});
+		this.stratum.on("authorize", (...argv) => {this.events.emit(this.prefix+"authorize", this, ...argv);});
+		this.stratum.on("set_difficulty", (difficulty) => {
+			this.logger.notice(`Set difficulty = ${difficulty.toFixed(3)}`);
+		});
+		this.stratum.on("set_extranonce", (extranonce1, extranonce2_size) => {
+			this.logger.notice(`Set extranonce1 = ${extranonce1}, extranonce2_size = ${extranonce2_size}`);
+		});
+		this.stratum.on("ready", () => {
+			this.events.emit(this.prefix+"ready");
+		});
 		
 		this.difficulty = null;
 		

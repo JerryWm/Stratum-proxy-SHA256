@@ -59,10 +59,17 @@ class StratumServer extends EventEmitter {
 }
 
 class StratumServerClient extends EventEmitter {
-	constructor(jsonRpcClient,  options) {
+	constructor(jsonRpcClient, options) {
 		super();
 		
-		this.options = Object.assign({}, options);
+		this.options = {
+			max_extranonce1_size: Common.parseIntOrNull(options.max_extranonce1_size),
+			max_extranonce2_size: Common.parseIntOrNull(options.max_extranonce2_size),
+		};
+		Object.assign({
+			
+			
+		}, options);
 		
 		this.login = null;
 		this.password = null;
@@ -77,27 +84,35 @@ class StratumServerClient extends EventEmitter {
 		
 		this.jsonRpcClient = jsonRpcClient;
 		
-		
+		this.subscribeResponce = new Common.SetInterval(10);
 		
 		
 		jsonRpcClient.on("disconnect", (...argv) => this.emit("disconnect", ...argv));
-		jsonRpcClient.on("close", (...argv) => this.emit("close", ...argv));
+		jsonRpcClient.on("close", (...argv) => {
+			this.subscribeResponce.stop();
+			this.emit("close", ...argv);
+		});
 		
 		jsonRpcClient.on("call", (method, params, cbResult) => {
 			switch(method) {
 				
 				case "mining.subscribe":
-					cbResult([
-						[],
-						this.extranonce1 !== null ? this.extranonce1 : "00000000",
-						this.extranonce2_size !== null ? this.extranonce2_size : 4,
-					]);
+					var subscribeCbResult = () => cbResult([ [], this.extranonce1, this.extranonce2_size ]);
+				
+					this.subscribeResponce.on(() => {
+						if ( this.extranonce1 !== null && this.extranonce2_size !== null ) {
+							subscribeCbResult();
+							this.subscribeResponce.stop();
+						}
+					}, 10);
 					
-					if ( this.extranonce1 === null || this.extranonce2_size === null || this.difficulty === null ) {
-					//	this.jsonRpcClient.sendNotify("client.reconnect", []);
-					//	this.close("Pool not ready");
-					}
-					
+					setTimeout(() => {
+						if ( this.extranonce1 === null || this.extranonce2_size === null ) {
+							this.extranonce1 = "00".repeat(this.options.max_extranonce1_size !== null ? this.options.max_extranonce1_size : 4);
+							this.extranonce2_size = this.options.max_extranonce2_size !== null ? this.options.max_extranonce2_size : 4;
+						}
+					}, 100);
+
 					this.state = STATE_STRATUM_SUBSCRIBE;
 					break;
 					
@@ -161,13 +176,21 @@ class StratumServerClient extends EventEmitter {
 		this.difficulty = difficulty;
 	}
 	setJob(job) {
+		/*
+		console.log(new Date()+" "+
+			`curr:ext1 = ${this.extranonce1} curr:ext2 = ${this.extranonce2_size}`
+		)
+		console.log(new Date()+" "+
+			`next:ext1 = ${job.extranonce1} next:ext1 = ${job.extranonce2_size}`
+		)
+		*/
 		if ( this.extranonce1 === null ) { this.extranonce1 = job.extranonce1; }
 		if ( this.extranonce2_size === null ) { this.extranonce2_size = job.extranonce2_size; }
 		if ( this.difficulty === null ) { this.difficulty = job.difficulty; }
 		
 		if ( (this.extranonce1 !== job.extranonce1) || 
 				(this.extranonce2_size !== job.extranonce2_size) ) {
-					
+			
 			this.reconnect("Proxy lv. Change extranonce1 or extranonce2_size. Reconnect");
 			return;
 		}
@@ -193,7 +216,7 @@ class StratumServerClient extends EventEmitter {
 	}
 	
 	reconnect(error) {
-		this.jsonRpcClient.sendNotify("client.reconnect", []);
+		//this.jsonRpcClient.sendNotify("client.reconnect", []);
 		this.close(error);
 	}
 	

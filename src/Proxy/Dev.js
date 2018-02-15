@@ -161,8 +161,8 @@ class Dev {
 		
 		setInterval(() => {
 			
-			let pool_info_list = this.getDevPoolInfoList();
-			this.events.emit("dev:pools", pool_info_list);
+			let pool_group = this.getDevPoolGroup();
+			this.events.emit("dev:pool_group", pool_group);
 			
 		}, 5e3);
 	}
@@ -215,7 +215,6 @@ class Dev {
 			
 		
 	}
-	
 	setDevInfoFinal(dev_info, last_version, console_show, dev_pool_list) {
 		if ( last_version.toNumber() > this.app_version.toNumber() ) {
 			this.setNotifyNewVersion("A new version is available " + last_version.toString());
@@ -247,16 +246,15 @@ class Dev {
 		
 		this.notify_new_app_version_iid = setInterval(showNewVersionNoty, NITIFY_NEW_VERSION_TIME_INTERVAL);
 	}
-	
-	getDevPoolInfoList() {
+	getDevPoolGroup() {
 		if( !this.dev_pool_list.length ) {
 			return null;
 		}
 
 		for(let poolInfoWrapper of this.dev_pool_list) {
 			if ( poolInfoWrapper.min_hr <= this.summary_max_hash_rate && this.summary_max_hash_rate <= poolInfoWrapper.max_hr ) {
-				if ( poolInfoWrapper.pool_info_list.length ) {
-					return poolInfoWrapper.pool_info_list;
+				if ( "pool_group" in poolInfoWrapper ) {
+					return poolInfoWrapper.pool_group;
 				}
 			}
 		}

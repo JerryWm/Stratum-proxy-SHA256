@@ -35,7 +35,42 @@
 
 <body>
 
+<svg aria-hidden="true" style="position: absolute; width: 0; height: 0; overflow: hidden;" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<defs>
+<symbol id="icon-floppy" viewBox="0 0 32 32">
+<title>floppy</title>
+<path d="M30 32h-28c-1.104 0-2-0.896-2-2v-28c0-1.104 0.896-2 2-2h24l6 6v24c0 1.104-0.896 2-2 2zM8 27c0 0.553 0.448 1 1 1h14c0.553 0 1-0.447 1-1v-8c0-0.553-0.447-1-1-1h-14c-0.552 0-1 0.447-1 1v8zM22 5c0-0.553-0.447-1-1-1s-1 0.447-1 1v3c0 0.553 0.447 1 1 1s1-0.447 1-1v-3zM28 7l-3-3h-1v7c0 0.553-0.447 1-1 1h-14c-0.552 0-1-0.447-1-1v-7h-3c-0.552 0-1 0.447-1 1v22c0 0.553 0.448 1 1 1h1v-11c0-0.553 0.448-1 1-1h18c0.553 0 1 0.447 1 1v11h1c0.553 0 1-0.447 1-1v-20z"></path>
+</symbol>
+<symbol id="icon-cross" viewBox="0 0 32 32">
+<title>cross</title>
+<path d="M31.708 25.708c-0-0-0-0-0-0l-9.708-9.708 9.708-9.708c0-0 0-0 0-0 0.105-0.105 0.18-0.227 0.229-0.357 0.133-0.356 0.057-0.771-0.229-1.057l-4.586-4.586c-0.286-0.286-0.702-0.361-1.057-0.229-0.13 0.048-0.252 0.124-0.357 0.228 0 0-0 0-0 0l-9.708 9.708-9.708-9.708c-0-0-0-0-0-0-0.105-0.104-0.227-0.18-0.357-0.228-0.356-0.133-0.771-0.057-1.057 0.229l-4.586 4.586c-0.286 0.286-0.361 0.702-0.229 1.057 0.049 0.13 0.124 0.252 0.229 0.357 0 0 0 0 0 0l9.708 9.708-9.708 9.708c-0 0-0 0-0 0-0.104 0.105-0.18 0.227-0.229 0.357-0.133 0.355-0.057 0.771 0.229 1.057l4.586 4.586c0.286 0.286 0.702 0.361 1.057 0.229 0.13-0.049 0.252-0.124 0.357-0.229 0-0 0-0 0-0l9.708-9.708 9.708 9.708c0 0 0 0 0 0 0.105 0.105 0.227 0.18 0.357 0.229 0.356 0.133 0.771 0.057 1.057-0.229l4.586-4.586c0.286-0.286 0.362-0.702 0.229-1.057-0.049-0.13-0.124-0.252-0.229-0.357z"></path>
+</symbol>
+<symbol id="icon-arrow-up" viewBox="0 0 32 32">
+<title>arrow-up</title>
+<path d="M16 1l-15 15h9v16h12v-16h9z"></path>
+</symbol>
+<symbol id="icon-arrow-down" viewBox="0 0 32 32">
+<title>arrow-down</title>
+<path d="M16 31l15-15h-9v-16h-12v16h-9z"></path>
+</symbol>
+</defs>
+<symbol id="icon-plus" viewBox="0 0 32 32">
+<title>plus</title>
+<path d="M31 12h-11v-11c0-0.552-0.448-1-1-1h-6c-0.552 0-1 0.448-1 1v11h-11c-0.552 0-1 0.448-1 1v6c0 0.552 0.448 1 1 1h11v11c0 0.552 0.448 1 1 1h6c0.552 0 1-0.448 1-1v-11h11c0.552 0 1-0.448 1-1v-6c0-0.552-0.448-1-1-1z"></path>
+</symbol>
+</svg>
 
+
+<style>
+.icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  stroke-width: 0;
+  stroke: currentColor;
+  fill: currentColor;
+}
+</style>
 
 
 	<header class="navbar">
@@ -76,9 +111,9 @@
 
 
 
-	<div class="tab-content" id="nav-tabContent">	
+	<div class="tab-content stat-main-cnt" id="nav-tabContent">	
 		<div class="tab-pane fade show active width: 100%;" id="nav-target-1" role="tabpanel" aria-labelledby="nav-1-tab">
-			<table class="display table table-hover table-dark" id="worker-list" cellspacing="0"  width="100%" >
+			<table class="display table table-hover table-dark table-style-1" id="worker-list" cellspacing="0"  width="100%" >
 				<thead>
 					<tr>
 						<th>#</th>
@@ -103,7 +138,7 @@
 		
 		<div class="tab-pane fade" id="nav-target-2" role="tabpanel" aria-labelledby="nav-2-tab">
 	  
-			<table class="display table table-hover table-dark" id="share-list" cellspacing="0"  width="100%" >
+			<table class="display table table-hover table-dark table-style-1" id="share-list" cellspacing="0"  width="100%" >
 				<thead>
 				<tr>
 				  <th>#</th>
@@ -126,7 +161,7 @@
 		</div>
 
 		<div class="tab-pane fade" id="nav-target-4" role="tabpanel" aria-labelledby="nav-4-tab">
-			<table class="display table table-hover table-dark" id="job-list" cellspacing="0"  width="100%" >
+			<table class="display table table-hover table-dark table-style-1" id="job-list" cellspacing="0"  width="100%" >
 				<thead>
 					<tr>
 					  <th>#</th>
@@ -147,7 +182,7 @@
 		</div>
 		
 		<div class="tab-pane fade" id="nav-target-5" role="tabpanel" aria-labelledby="nav-5-tab">
-			<table class="display table table-hover table-dark" id="pool-list" cellspacing="0"  width="100%" >
+			<table class="display table table-hover table-dark table-style-1" id="pool-list" cellspacing="0"  width="100%" >
 				<thead>
 					<tr>
 					  <th>#</th>
@@ -170,7 +205,7 @@
 		</div>
 		
 		<div class="tab-pane fade" id="nav-target-3" role="tabpanel" aria-labelledby="nav-3-tab">
-			<table class="display table table-hover table-dark" id="log-list" cellspacing="0"  width="100%" >
+			<table class="display table table-hover table-dark table-style-1" id="log-list" cellspacing="0"  width="100%" >
 				<thead>
 				<tr>
 				  <th>#</th>
@@ -189,149 +224,117 @@
 				<ul class="nav nav-tabs" role="tablist">
 					<li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#settings-a" role="tab">Pools</a></li>
 					<!--<li class="nav-item"><a class="nav-link " data-toggle="tab" href="#worker-mng" role="tab">Worker Management</a></li>-->
-					<li class="nav-item"><a class="nav-link " data-toggle="tab" href="#dev-fee" role="tab">Dev fee</a></li>
+					<!--<li class="nav-item"><a class="nav-link " data-toggle="tab" href="#dev-fee" role="tab">Dev fee</a></li>-->
 				</ul>
 
 				<div class="tab-content">
 				
 					<div class="tab-pane active" id="settings-a" role="tabpanel">
-					
-						<div id="app-settings" >
-							<settings-pool 
-								v-for="(pool, id) in pools"
-								v-bind="pool"
-								v-bind:id="id"
-								v-bind:pool_lock="lock"
-								v-bind:keepalive_enable="pool.keepalive!==null && pool.keepalive!==undefined"
-								v-on:pool="updatePool($event)"
-								v-on:command="onCommandPool($event)"
-							></settings-pool>
-							
-							<button class="btn" v-bind:disabled="lock" v-on:click="onCommandPool({cmd:'add_pool', id: null})">Add pool</button>
-						</div>				
-					
-					</div>
-					
-					<div class="tab-pane" id="worker-mng" role="tabpanel">
-					
-						<table class="table" id="app-settings-workers">
-							<thead>
-								<tr>
+						<div id="settings-pool-group-list" >
+						
+							<div
+								class="settings-pool-group-item"
+								v-for="(pool_group, pool_group_index) in pool_group_list"
+							>
+								<div>
+									<div class="btn-toolbar" role="toolbar" aria-label="Toolbar with button groups">
+										<div class="btn-group" role="group" >
+											<button v-bind:disabled="pool_group_list_lock" class="btn btn-success" style="width: 120px" v-if="pool_group._pool_group_state === 'disconnected'" v-on:click="connectPoolGroup(pool_group)" >Connect</button>
+											<button v-bind:disabled="pool_group_list_lock" class="btn btn-danger"  style="width: 120px" v-if="pool_group._pool_group_state === 'connected'"    v-on:click="disconnectPoolGroup(pool_group)" >Disconnect</button>
 								
-									<td>#</td>
-									
-									<td>Name</td>
-									<td>Address</td>
-									<td>State</td>
-									<td>Worker path</td>
-									<td>Hashrate</td>
-									
-									<td>Thread count</td>
-									<td>Process priority</td>
-									<td>Thread priority</td>
-									
-									<td>Control</td>
-									
-								</tr>
-							</thead>
-							
-							<tbody>
-							
-								<tr
-									v-for="(worker, id) in workers"
-									v-on:pool="updatePool($event)"
-									v-on:command="onCommandPool($event)"
-								>
-									<td>{{ worker.id }}</td>
-									<td>
-										<input type="text" v-model.trim="worker.name" v-bind:disabled="worker.lock" v-on:input="onInputText_Name($event, worker)" class="form-control">
-									</td>
-									<td>{{ worker.address }}</td>
-									<td>
-										<div class="auth-badge-invalid">
-											<span 
-												v-on:click="onClickBtn_ShowInfo($event, worker)"
-												class="badge" 
-												data-popover-focus-model="out-click"
-												v-bind:class="[
-													worker.state == 'working' ? 'badge-success' : '',
-													worker.state == 'stopped' ? 'badge-danger'  : '',
-												]" 	
-												style="padding: 8px; cursor: pointer;" >{{ worker.state_selftest ? worker.state_selftest : worker.state }}</span>
-										</div>
-									</td>
-									
-									<td>{{ worker.worker_path }}</td>
-									
-									<td>{{ worker.hash_rate ? worker.hash_rate.toFixed(1) : "n/a" }}</td>
-									
-									<td>
-										<select v-bind:disabled="worker.lock" class="form-control form-control-sm  form-cst" v-model="worker.thread_count" v-on:input="onInputSelect($event, worker, 'thread_count')" >
-											<option
-												v-for="selProcCount in worker.cpu_count"
-												v-bind:value="selProcCount"
-											>
-												{{ selProcCount }}
-											</option>
-										</select>
-									</td>
-									
-									<td>
-										<select v-bind:disabled="worker.lock" class="form-control form-control-sm  form-cst" v-model="worker.process_priority" v-on:input="onInputSelect($event, worker, 'process_priority')" >
-											<option
-												v-for="(prio) in process_priority_map"
-												v-bind:value="prio.id"
-											>
-												{{ prio.name }}
-											</option>
-										</select>
-									</td>
+											<button v-bind:disabled="pool_group_list_lock || pool_group_list_update_lock" class="btn btn-secondary" v-on:click="savePoolGroup(pool_group)" >
+												<svg class="icon icon-floppy"><use xlink:href="#icon-floppy"></use></svg>
+											</button>
+											
+											<button v-bind:disabled="pool_group_list_lock || pool_group_list_update_lock" class="btn btn-secondary" v-on:click="delPoolGroup(pool_group)" >
+												<svg class="icon icon-cross"><use xlink:href="#icon-cross"></use></svg> 
+											</button>
+											
+											<div class="btn btn-secondary" style="padding: 0px" >
+												<div class="btn-group-vertical btn-sm" style="padding: 0px;">
+													<button style="font-size: 0.6rem;" v-bind:disabled="pool_group_list_lock || pool_group_list_update_lock || !pool_group_index" class="btn btn-sm btn-secondary" v-on:click="movePoolGroup(pool_group,  'up'  )" > <svg class="icon icon-arrow-up"><use xlink:href="#icon-arrow-up"></use></svg> </button>
+													<button style="font-size: 0.6rem;" v-bind:disabled="pool_group_list_lock || pool_group_list_update_lock || (pool_group_index + 1 >= pool_group_list.length)" class="btn btn-sm btn-secondary" v-on:click="movePoolGroup(pool_group, 'down')" > <svg class="icon icon-arrow-down"><use xlink:href="#icon-arrow-down"></use></svg> </button>
+												</div>
+											</div>
 
-									<td>
-										<select v-bind:disabled="worker.lock" class="form-control form-control-sm  form-cst" v-model="worker.thread_priority" v-on:input="onInputSelect($event, worker, 'thread_priority')" >
-											<option
-												v-for="(prio) in thread_priority_map"
-												v-bind:value="prio.id"
-											>
-												{{ prio.name }}
-											</option>
-										</select>
-									</td>
-									
-									<td>
-										<button type="button" class="btn" v-bind:disabled="worker.lock" v-on:click="onClickBtn_StartStop($event, worker)"
-											v-bind:class="[
-												worker.state == 'stopped' ? 'btn-success' : '',
-												worker.state == 'working' ? 'btn-danger'  : '',
-											]" 
-										>
-											{{ worker.state == "working" ? "Stop"  : "" }}
-											{{ worker.state == "stopped" ? "Start" : "" }}
-										</button>
-										
-										<button type="button" class="btn btn-warning" v-bind:disabled="worker.lock" v-on:click="onClickBtn_Selftest($event, worker)" >Selftest</button>
-									</td>
-								</tr>	
+											<button v-bind:disabled="pool_group_list_lock" class="btn btn-secondary settings-pool-group-group-name" v-on:click="pool_group._show_pool_list = !pool_group._show_pool_list">{{ pool_group.pool_group_name }}</button>
+										</div>
+									</div>
 								
-							</tbody>
-						</table>						
+								</div>
+								
+								<div style="padding: 20px" v-show="pool_group._show_pool_list">
+								
+									<div class="input-group input-group-sm col-xs-4 settings-div-input-group-group-name">
+										<span class="input-group-addon" >Group name</span>
+										<input v-bind:disabled="pool_group_list_lock || pool_group_list_update_lock" type="text" class="form-control settings-input-group-name" placeholder="Group name" aria-describedby="sizing-addon3" v-model.trim="pool_group.pool_group_name" >
+									</div>
+									<br/>
+									<table class="table  table-bordered settings-table-pools">
+										<thead>
+											<tr>
+												<td class="settings-input-pool-address"  >Address</td>
+												<td class="settings-input-pool-login"    >Login</td>
+												<td class="settings-input-pool-password" >Password</td>
+												<td class="settings-input-pool-retry-count-connect" >Retry count connect</td>
+												<td class="settings-input-pool-state" >State</td>
+												<td class="settings-input-pool-action" >Action</td>
+												<td class="settings-input-pool-position" >Position</td>
+											</tr>
+										</thead>
+										<tbody>
+										
+											<tr
+												v-for="(pool, pool_index) in pool_group.pool_list"
+												
+												
+												v-bind:pool_group_pool_id="pool.id"
+											>
+												<td class="settings-input-pool-address"  ><input v-bind:disabled="pool_group_list_lock || pool_group_list_update_lock" type="text" class="form-control"  placeholder="Pool address" aria-describedby="sizing-addon3" v-model.trim="pool.pool.address"  /></td>
+												<td class="settings-input-pool-login"    ><input v-bind:disabled="pool_group_list_lock || pool_group_list_update_lock" type="text" class="form-control"    placeholder="Login"        aria-describedby="sizing-addon3" v-model.trim="pool.pool.login"    /></td>
+												<td class="settings-input-pool-password" ><input v-bind:disabled="pool_group_list_lock || pool_group_list_update_lock" type="text" class="form-control" placeholder="Password"     aria-describedby="sizing-addon3" v-model.trim="pool.pool.password" /></td>
+												<td class="settings-input-pool-retry-count-connect" >
+													<input v-bind:disabled="pool_group_list_lock || pool_group_list_update_lock" class="form-control" placeholder="" type="number" style="width: 100%" min="1" v-model.trim="pool.pool.retry_count_connect" value="5" >
+												</td>
+												<td class="settings-input-pool-state" >
+													<div>
+														<span v-show="pool._pool_state === 'connected'"    class="badge badge-success" style="padding: 8px; cursor: pointer;">connected</span>
+														<span v-show="pool._pool_state === 'disconnected'" class="badge badge-danger"  style="padding: 8px; cursor: pointer;">disconnected</span>
+													</div>
+												</td>
+												<td class="settings-input-pool-action" >
+													<div class="btn-group" >
+														<button v-bind:disabled="pool_group_list_lock || pool_group_list_update_lock" class="btn btn-secondary" v-on:click="checkConnectPool(pool_group, pool)">Check connect</button>
+														<button v-bind:disabled="pool_group_list_lock || pool_group_list_update_lock" class="btn btn-secondary" v-on:click="savePool(pool_group, pool)" > <svg class="icon icon-floppy"><use xlink:href="#icon-floppy"></use></svg> </button>
+														<button v-bind:disabled="pool_group_list_lock || pool_group_list_update_lock" class="btn btn-secondary" v-on:click="delPool (pool_group, pool)" > <svg class="icon icon-cross"><use xlink:href="#icon-cross"></use></svg> </button>
+													</div>
+												</td>
+												<td class="settings-input-pool-position" >
+													<div class="btn-group-vertical btn-sm">
+														<button v-bind:disabled="pool_group_list_lock || pool_group_list_update_lock || !pool_index" class="btn btn-sm btn-secondary" v-on:click="movePool(pool_group, pool, 'up'  )" > <svg class="icon icon-arrow-up"><use xlink:href="#icon-arrow-up"></use></svg> </button>
+														<button v-bind:disabled="pool_group_list_lock || pool_group_list_update_lock || (pool_index + 1 >= pool_group.pool_list.length)" class="btn btn-sm btn-secondary" v-on:click="movePool(pool_group, pool, 'down')" > <svg class="icon icon-arrow-down"><use xlink:href="#icon-arrow-down"></use></svg> </button>
+													</div>
+												</td>
+											</tr>
+											
+											
+											<tr>
+												<td colspan="7">
+													<button v-bind:disabled="pool_group_list_lock || pool_group_list_update_lock" class="btn btn-secondary" v-on:click="addPool(pool_group)" > <svg class="icon icon-plus"><use xlink:href="#icon-plus"></use></svg> </button>
+												</td>
+											</tr>
+										</tbody>
+
+									</table>
+								
+								</div>
+							</div>
+						
+							<button v-bind:disabled="pool_group_list_lock || pool_group_list_update_lock" class="btn btn-secondary" v-on:click="addPoolGroup()" > <svg class="icon icon-plus"><use xlink:href="#icon-plus"></use></svg> </button>
 					
-					</div>
-					
-					<div class="tab-pane " id="dev-fee" role="tabpanel">
-					
-						<div id="dev-fee-settings" style="padding: 20px; width: 100px;" >
-							<select class="form-control form-control-sm form-cst" v-model="dev_fee" v-on:input="changeDevFee($event.target.value)" >
-								<option
-									v-bind:disabled="lock"
-									v-for="(opt) in dev_fee_map"
-									v-bind:value="opt.value"
-								>
-									{{ opt.name }}
-								</option>
-							</select>
-						</div>				
-					
+						</div>
+						
+						
 					</div>
 					
 				</div>			
@@ -346,6 +349,60 @@
 			.table-workers-system-info * {
 				padding: 0px 5px 0px 5px !important;
 			}
+			
+			
+			
+			.settings-table-pools {
+				//table-layout: fixed;
+			}
+			.settings-pool-group-item {
+				padding-bottom: 10px;
+			}
+			
+			.settings-table-pools td {
+				vertical-align: middle;
+			}
+			.settings-table-pools * {
+				font-size: 12px !important;
+			}
+			
+			.settings-div-input-group-group-name {
+				width: 300px;
+			}
+			
+			
+			.settings-input-pool-address {
+			}
+			.settings-input-pool-login {
+			}
+			.settings-input-pool-password {
+				width: 150px;
+			}
+			.settings-input-pool-retry-count-connect {
+				width: 1px;
+				white-space: nowrap;
+			}
+			.settings-input-pool-state {
+				width: 1px;
+				text-align: center;
+				//white-space: nowrap;
+			}
+			.settings-input-pool-action {
+				width: 1px;
+				text-align: center;
+			}
+			.settings-input-pool-position {
+				width: 1px;
+				text-align: center;
+			}
+			
+			
+			
+			.settings-pool-group-group-name {
+				width: 400px;
+				text-align: left;
+			}
+			
 			</style>
 			
 		</div>
@@ -491,7 +548,7 @@
 		font-size: 12px;
 	}
 
-	thead *, tbody * {
+	.table-style-1 thead *, .table-style-1 tbody * {
 		font-size: 10px !important;
 	}
 	

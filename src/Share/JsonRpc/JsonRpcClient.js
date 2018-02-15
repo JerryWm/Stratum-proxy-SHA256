@@ -106,14 +106,28 @@ class JsonRpcClient extends EventEmitter {
 		if ( this.expected_result_iid === null ) {
 			this.expected_result_iid = setInterval(() => {
 				
+				let del_ids = [];
+				
 				let curr_time = +new Date();
 				for(let id in this.expected_result_kv) {
 					let expres = this.expected_result_kv[id];
 
 					if ( expres.time + this.expected_result_timeout_milisec < curr_time ) {
-						this.close("Pool did not send the result. Timeout error");
-						return;
+						if ( expres.riseError ) {
+							this.close("Pool did not send the result. Timeout error");
+							break;
+						}
+						
+						if ( expres.onresult ) {
+							expres.onresult(null, null, "Pool did not send the result. Timeout error");
+						}
+						
+						del_ids.push(id);
 					}
+				}
+				
+				for(let id of del_ids) {
+					delete this.expected_result_kv[id];
 				}
 				
 			}, 2e3);
@@ -125,10 +139,11 @@ class JsonRpcClient extends EventEmitter {
 			this.expected_result_iid = null;
 		}
 	}
-	expectedResult_Reg(id, onresult) {
+	expectedResult_Reg(id, onresult, riseError = true) {
 		this.expected_result_kv[id] = {
 			time: +new Date(),
 			onresult: onresult,
+			riseError: riseError,
 		}
 	}
 	expectedResult_GetCbAndDel(id) {
@@ -145,14 +160,14 @@ class JsonRpcClient extends EventEmitter {
 		return expres.onresult;
 	}
 	
-	sendMethod(method_name, params, onresult) {
+	sendMethod(method_name, params, onresult, riseError = true) {
 		let data = {
 			id    : this.id_seq++,
 			method: method_name,
 			params: params,
 		};
 		
-		this.expectedResult_Reg(data.id, onresult);
+		this.expectedResult_Reg(data.id, onresult, riseError);
 		
 		this.net.send(data);
 	}

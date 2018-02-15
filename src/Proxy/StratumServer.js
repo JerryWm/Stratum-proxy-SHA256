@@ -92,8 +92,6 @@ class StratumServer {
 		this.events = events;
 		this.id = Common.getGlobalUniqueId();
 		this.logger = new Logger(logger, "STRATUM-SERVER #" + this.id);
-
-		
 		
 		this.options = {
 			bind_address: options.bind_address,
@@ -102,7 +100,8 @@ class StratumServer {
 			
 			min_difficulty: options.min_difficulty || null,
 			max_difficulty: options.max_difficulty || null,
-			max_extranonce2_size: options.max_extranonce2_size || null,
+			max_extranonce1_size: options.max_extranonce1_size,
+			max_extranonce2_size: options.max_extranonce2_size,
 		};
 		
 		this.logger.notice(`Attempting opened server on ${this.logInfoServer(Logger.LOG_COLOR_MAGENTA_LIGHT, Logger.LOG_COLOR_GRAY)}`);
@@ -162,6 +161,10 @@ class StratumServerClient {
 		
 		this.address = this.stratumServerClient.jsonRpcClient.net.socket.remoteAddress+":"+this.stratumServerClient.jsonRpcClient.net.socket.remotePort;
 
+		
+		this.options.max_extranonce1_size = this.parseIntOrNull(this.options.max_extranonce1_size);
+		this.options.max_extranonce2_size = this.parseIntOrNull(this.options.max_extranonce2_size);
+		
 		this.agent = "";
 		this.wallet_address   = "";
 		this.pool_password = "";
@@ -211,7 +214,16 @@ class StratumServerClient {
 		this.events.emit(this.prefix+"accepted_share", this, wrapperShareWorker);
 		//console.log("Worker share")
 		
+		/*
+		let jobForWorker2 = jobForWorker.copy();
+		jobForWorker2.job.extranonce1 = jobForWorker._extranonce1_prefix + jobForWorker2.job.extranonce1; 
+		jobForWorker2.job.coinb1 = jobForWorker2.job.coinb1.substr(0, jobForWorker2.job.coinb1.length - jobForWorker._extranonce1_prefix.length);
+		jobForWorker2.update();
+		console.log( jobForWorker2.job.extranonce1, jobForWorker2.block_job.testShare(sharePool) )
+		*/
+		
 		sharePool.extranonce2 += jobForWorker._extranonce2_postfix;
+		//console.log(jobForWorker._extranonce1_prefix, jobForWorker._extranonce2_postfix)
 		
 		let jobForPool = this.jobs_pools.
 			filter(job => (job.job_id === jobForWorker.job_id) && (job.job.extranonce2_size === (sharePool.extranonce2.length/2))).
@@ -242,6 +254,7 @@ class StratumServerClient {
 		this.jobs_workers.push(jobForWorker);
 
 		jobForWorker.job.difficulty = this.filterDifficulty(jobForWorker.job.difficulty, this.options.min_difficulty, this.options.max_difficulty);
+		jobForWorker._extranonce1_prefix  = this.filterExtranonce1(jobForWorker.job, this.options.max_extranonce1_size);
 		jobForWorker._extranonce2_postfix = this.filterExtranonce2(jobForWorker.job, this.options.max_extranonce2_size);
 		jobForWorker.update();
 
@@ -255,16 +268,44 @@ class StratumServerClient {
 		if ( max ) { difficulty = Math.min(difficulty, max); }
 		return difficulty;
 	}
+	filterExtranonce1(job, max_extranonce1_size) {
+		let extranonce1_prefix = "";
+		
+		let extranonce1_size = job.extranonce1.length / 2;
+		if ( (max_extranonce1_size !== null) && (extranonce1_size > max_extranonce1_size) ) {
+			extranonce1_prefix = job.extranonce1.substr(0, (extranonce1_size - max_extranonce1_size)*2);
+			job.extranonce1 = job.extranonce1.substr((extranonce1_size - max_extranonce1_size)*2);
+		
+			job.coinb1 = job.coinb1 + extranonce1_prefix;
+		}
+		
+		return extranonce1_prefix;
+	}
 	filterExtranonce2(job, max_extranonce2_size) {
 		let extranonce2_postfix = "";
 		
-		if ( max_extranonce2_size && (job.extranonce2_size > max_extranonce2_size) ) {
+		if ( (max_extranonce2_size !== null) && (job.extranonce2_size > max_extranonce2_size) ) {
 			extranonce2_postfix = "00".repeat(job.extranonce2_size - max_extranonce2_size);
 			job.extranonce2_size = max_extranonce2_size;
 			job.coinb2 = extranonce2_postfix + job.coinb2;
 		}
 		
 		return extranonce2_postfix;
+	}
+	
+	
+	parseIntOrNull(n) {
+		if ( typeof n === "number" || typeof n === "string" ) {
+			n = parseInt(n);
+		} else {
+			n = null;
+		}
+		
+		if ( !isFinite(n) ) {
+			n = null;
+		}
+		
+		return n;
 	}
 }
 

@@ -20,6 +20,7 @@ methods:
 	close
 */
 
+const DEV_SIMPLE_DUMP = false;
 
 class Client extends EventEmitter {
 	
@@ -135,12 +136,14 @@ class Client extends EventEmitter {
 	}
 	
 	recvData(data) {
-		//console.log(data);
+		if ( DEV_SIMPLE_DUMP ) {console.log(data);}
+		
 		this.emit("data", data);
 	}
 	
 	send(data) {
-		//console.log(data);
+		if ( DEV_SIMPLE_DUMP ) {console.log(data);}
+		
 		if ( this.socket ) {
 			this.socket.write(JSON.stringify(data) + "\n");
 		}

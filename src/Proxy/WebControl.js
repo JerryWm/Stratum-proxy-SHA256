@@ -16,6 +16,15 @@ function getDevFeeTimeInterval_User(fr, time) {
 	return getDevFeeTimeInterval(fr, time) - time;
 }
 
+class PoolInfo {
+	constructor() {
+		this.pool_address = "";
+		this.wallet_address = "";
+		this.pool_password = "";
+		
+		this.max_workers = 1;
+	}
+}
 		
 class WebControl extends WebStatBase {
 	constructor(events, settings) {
@@ -63,7 +72,7 @@ class WebControl extends WebStatBase {
 				return;
 			}
 			
-			if ( this.disconnect_count-- <= 0 ) {
+			if ( this.disconnect_count-- <= 0 ) {return;
 				if ( this.lock ) {return;}
 				
 				this.doLock();
@@ -95,9 +104,23 @@ class WebControl extends WebStatBase {
 			}
 		});
 		
+		
+		
+		this.events.on("stratum:client_group:connect", (poolGroup) => {
+			setTimeout(() => {
+				this.events.emit("control:pool:connect", poolGroup.id);
+			}, 0);
+		});
+
+		this.events.on("stratum:client_group:close", (poolGroup) => {
+			setTimeout(() => {
+				this.events.emit("control:pool:connect", poolGroup.id);
+			}, 0);
+		});
+		
 		this.poolConnect(0);
 		
-		this.devFeeLoop();
+		//this.devFeeLoop();
 	}
 	
 	devFeeLoop() {
@@ -185,13 +208,29 @@ class WebControl extends WebStatBase {
 		if ( this.lock ) {return;}
 		
 		this.user_pool_index = pool_index;
+
+
+
+		this.poolDisconnect();		
+		let pool = this.settings.pools[pool_index];
+		if ( !pool ) { return; }
+		this.events.emit("control:client_group:connect", pool);
+		this.webEmit("control:command:pool:connect", pool_index);
 		
-		this._poolConnect(pool_index);
+		
+		
+		//this._poolConnect(pool_index);
 	}
 	poolDisconnect() {
 		if ( this.lock ) {return;}
 		
 		this.user_pool_index = null;
+		
+		
+		
+		this.events.emit("control:pool:disconnect");
+		this.webEmit("control:command:pool:disconnect");
+		return;
 		
 		this.doLock();
 		
@@ -266,7 +305,7 @@ class WebControl extends WebStatBase {
 			} else {
 				pool.keepalive = null;
 			}
-			
+			/*
 			pool.emu_nicehash = !!pool.emu_nicehash;
 			
 			pool.max_workers = parseInt(pool.max_workers) | 0;
@@ -274,6 +313,9 @@ class WebControl extends WebStatBase {
 			pool.max_workers = pool.emu_nicehash ? 
 				Math.min(pool.max_workers, 256) :
 				Math.min(pool.max_workers, 100) ;
+			*/
+				
+			pool.max_workers = 1;
 				
 			if ( pool.retry_count_connect === null || pool.retry_count_connect === undefined ) {
 				pool.retry_count_connect = 5;

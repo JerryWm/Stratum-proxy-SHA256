@@ -26,6 +26,8 @@ const StratumStructures = require("./StratumStructures");
 		job
 */
 
+const _filter_extranonce1 = {type: "hex", error_template: "invalid extranonce1 ({{error}})"};
+const _filter_extranonce2_size = {type: "number", min: 2, max: 32, error_template: "invalid extranonce2 size ({{error}})"};
 
 const filter_notify = {
 	type: "array",
@@ -46,8 +48,8 @@ const filter_subscribe_response = {
 	type: "array",
 	items: [
 		{type: "any", error_template: "invalid subscribe rsp #1 ({{error}})"},
-		{type: "hex", min_length: 1, max_length: 32, error_template: "invalid extranonce1 ({{error}})"},
-		{type: "number", min: 2, max: 32, error_template: "invalid extranonce2 size ({{error}})"},		
+		_filter_extranonce1,
+		_filter_extranonce2_size,		
 	],
 	error_template: "invalid subscribe response data ({{error}})"
 };
@@ -62,6 +64,14 @@ const filter_set_difficulty = {
 		{type: "number", min: 0, error_template: "invalid difficulty ({{error}})"},
 	],
 	error_template: "invalid set_difficulty data ({{error}})"
+};
+const filter_set_extranonce = {
+	type: "array",
+	items: [
+		_filter_extranonce1,
+		_filter_extranonce2_size,	
+	],
+	error_template: "invalid set_extranonce data ({{error}})"
 };
 const filter_error = {
 	type: "array",
@@ -100,6 +110,25 @@ class StratumClient extends EventEmitter {
 		this.job = null;
 		///---------------
 		
+		///---------------
+		this.once_subscribe_response = false;
+		this.once_authorize = false;
+		this.once_set_difficulty = false;
+		this.once_job = false;
+		this.once_emit_ready = false;
+		this.isReady = () => {
+			return this.once_subscribe_response && this.once_authorize && this.once_set_difficulty && this.once_job;
+		}
+		this.emitReady = () => {
+			if ( this.isReady() ) {
+				if ( this.once_emit_ready ) { return; }
+				this.once_emit_ready = true;
+				this.emit("ready");
+			}
+		}
+		///---------------
+		
+		
 
 		this.jsonRpc.on("connect", () => {
 			
@@ -108,9 +137,14 @@ class StratumClient extends EventEmitter {
 					return;
 				}
 
-				this.extranonce1 = result[1];
-				this.extranonce2_size = parseInt(result[2]);
+				this.onNotify_mining_set_extranonce([result[1], result[2]]);
+				//this.extranonce1 = result[1];
+				//this.extranonce2_size = parseInt(result[2]);
 				
+				this.once_subscribe_response = true;
+				this.emit("subscribe_response", true);
+				this.emitReady();
+
 				this.authorize(this.options.login, this.options.password, (result, error) => {
 					if ( error ) {
 						this.close(this.errorToString(error));
@@ -121,6 +155,18 @@ class StratumClient extends EventEmitter {
 						this.close(`Authentication failed. May be incorrect login(${options.login}) or password(${options.password})`);
 						return;
 					}
+						
+					this.once_authorize = true;
+					this.emit("authorize", true);
+					this.emitReady();
+		
+					this.subscribe_extranonce((result, error, timeoutError) => {
+						if ( result ) {
+							this.emit("support:set_extranonce", true);
+						} else {
+							this.emit("support:set_extranonce", false);
+						}
+					});
 				});
 			});
 			
@@ -159,6 +205,9 @@ class StratumClient extends EventEmitter {
 			share.nonce
 		], onResult);
 	}
+	subscribe_extranonce(onResult) {
+		this.jsonRpc.sendMethod("mining.extranonce.subscribe", [], onResult, false);
+	}
 	
 	filterOrClose(x, filter, error) {
 		if ( error ) {
@@ -196,6 +245,10 @@ class StratumClient extends EventEmitter {
 				this.onNotify_mining_notify(params);
 				break;
 				
+			case "mining.set_extranonce":
+				this.onNotify_mining_set_extranonce(params);
+				break;
+				
 			default:
 				this.jsonRpc.close(`Pool send unknown method "${method}"`);
 				break;
@@ -207,6 +260,20 @@ class StratumClient extends EventEmitter {
 		}
 		
 		this.difficulty = parseFloat(params[0]);
+		
+		this.once_set_difficulty = true;
+		this.emit("set_difficulty", this.difficulty);
+		this.emitReady();
+	}
+	onNotify_mining_set_extranonce(params) {
+		if ( !this.filterOrClose(params, filter_set_extranonce) ) {
+			return;
+		}
+		
+		this.extranonce1 = params[0];
+		this.extranonce2_size = parseInt(params[1]);
+		
+		this.emit("set_extranonce", this.extranonce1, this.extranonce2_size);
 	}
 	onNotify_mining_notify(params) {
 		if ( !this.filterOrClose(params, filter_notify) ) {
@@ -239,7 +306,9 @@ class StratumClient extends EventEmitter {
 			clean_jobs: clean_jobs,
 		});
 		
+		this.once_job = true;
 		this.emit("job", this.job);
+		this.emitReady();
 	}
 
 	getJob() {

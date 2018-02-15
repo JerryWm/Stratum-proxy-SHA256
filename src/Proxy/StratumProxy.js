@@ -10,6 +10,8 @@ const StratumCommon = require("./StratumCommon");
 const StratumClient = require("./StratumClient");
 const StratumServer = require("./StratumServer");
 
+const LoopData = require("./../Share/Common/LoopData");
+
 const STRATUM_PROXY_SERVER_RECONNECT_INTERVAL = 5e3;
 const STRATUM_PROXY_CLIENT_RECONNECT_INTERVAL = 5e3;
 const HTTP_SERVER_RECONNECT_INTERVAL = 5e3;
@@ -20,54 +22,17 @@ const STRATUM_LOOP_CONNECT_POOL_TIMEOUT = 5e3;
 
 let MAX_WORKERS = 100;
 
-class JobMng {
-	constructor(job) {
-		this.job = job;
-		let blob = job.blob;
-
-		let ofs = 0;
-		this.part1 = blob.substr(0, 39*2);
-		ofs += 39*2;
-		this.nonce3byte = blob.substr(ofs, 6); ofs += 6;
-		this.nonce1byte = blob.substr(ofs, 2); ofs += 2;
-		this.part2 = blob.substr(ofs);
-		
-		this.nonce3byte = Common.hexToUint32(this.nonce3byte + "00") | 0;
-		this.nonce1byte = parseInt(this.nonce1byte, 16) | 0;
-		//console.log("this.nonce1byte: " + this.nonce1byte)
-		this.seq = 0;
-	}
-	
-	getNonceHex() {
-		return Common.uint32ToHex(this.nonce3byte).substr(0, 6) + Common.uint32ToHex(this.nonce1byte).substr(0, 2);
-	}
-	
-	getJob() {
-		this.seq++;
-		
-		//console.log("`~`this.getNonceHex(): " + this.getNonceHex());
-		
-		return {
-			job_id: this.job.job_id,
-			target: this.job.target,
-			blob  : this.part1 + this.getNonceHex() + this.part2
-		};
-	}
-}
-
 class WrapperPool {
 	constructor(id, pool, options) {
 		this.id = id;
 		this.pool = pool;
 		
-		this.options = options;
+		this.options = Object.assign({maxWorkersCount: 1}, options);
 		
 		this.workersCount = 0;
 		this.workers = {};
 
-		this.job_id = null;
-		
-		this.jobMng = null;
+		this.job_id = null;		
 	}
 	
 	clear() {
@@ -79,17 +44,32 @@ class WrapperPool {
 		if ( this.workersCount >= this.options.maxWorkersCount ) {
 			return false;
 		}
-
+		
 		this.workers[id] = worker;
 		this.workersCount++;
-		
+		///console.log('...this.jobForWorker')
 		this.jobForWorker(id);
 		
 		return true;
 	}
 	delWorker(id) {
+		let wrapperWorker = this.workers[id]; if ( !wrapperWorker ) { return; }
+		if ( wrapperWorker.pool ) {
+			wrapperWorker.delPool();
+		}
+		
 		delete this.workers[id];
 		this.workersCount--;
+	}
+	delWorkers() {
+		let arr = [];
+		for(let worker_id in this.workers) {
+			arr.push(worker_id);
+		}
+		
+		for(let worker_id of arr) {
+			this.delWorker(worker_id);
+		}
 	}
 	
 	newJob() {
@@ -115,25 +95,378 @@ class WrapperPool {
 	}
 
 	submitShare(share) {
-		this.pool.submitShare(share);
+		if ( this.pool ) {
+			this.pool.submitShare(share);
+		}
 	}
 	
 
 }
 
 class WrapperWorker {
-	constructor(id, worker) {
+	constructor(id, worker, events) {
 		this.id = id;
 		this.worker = worker;
+		this.events = events;
 		this.pool = null;
 	}
 	
 	addPool(pool) {
 		this.pool = pool;
+		//console.log("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@.stratum:proxy:pool_add_worker")
+		this.events.emit("stratum:proxy:pool_add_worker", this.pool.pool, this.worker);
+	}
+	delPool() {
+		if ( this.pool ) {
+			//console.log("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@.stratum:proxy:pool_del_worker")
+			this.events.emit("stratum:proxy:pool_del_worker", this.pool.pool, this.worker);
+		}
+		this.pool = null;
 	}
 	
 	setWorker(worker) {
 		this.worker = worker;
+	}
+}
+
+
+const MAX_WORKER_COUNT_TIME_INTERVAL_SEC = 5*60;
+
+class MaxWorkerCount {
+	constructor(events) {
+		this.events = events;
+		this.worker_count = 0;
+		this.max_worker_count = 0;
+		this.last_update_time_sec = Common.currTimeSec();
+
+		this.time_interval_sec = MAX_WORKER_COUNT_TIME_INTERVAL_SEC;
+		
+		events.on("stratum:server:worker:connect"         , this.workerConnect      .bind(this));
+		this.events.on("stratum:server:worker:disconnect"      , this.workerDisconnect   .bind(this));
+	}
+	
+	workerConnect() {
+		this.worker_count++;
+		this.max_worker_count = Math.max(this.max_worker_count, this.worker_count);
+		this.last_update_time_sec = Common.currTimeSec();
+	}
+	workerDisconnect() {
+		this.worker_count--;
+		this.last_update_time_sec = Common.currTimeSec();
+	}
+	
+	getMaxWorkerCount() {
+		if ( Common.currTimeSec() > this.last_update_time_sec + this.time_interval_sec ) {
+			this.max_worker_count = this.worker_count;
+		}
+		
+		return this.max_worker_count;
+	}
+}
+
+
+class PoolGroup {
+	constructor(pool_info, getMaxWorkerCount, events, logger) {
+		this.id = Common.getGlobalUniqueId();
+		this.pool_info = Object.assign({
+			retry_count_connect: 5
+		}, pool_info);
+		this.getMaxWorkerCount = getMaxWorkerCount;
+		this.events = events;
+		this.logger = logger;
+		this.prefix = "stratum:client_group:";
+
+		this.pools = Object.create(null);
+		this.pools_open = Object.create(null);
+		this.pools_connect = Object.create(null);
+		this.pools_job = Object.create(null);
+		this.pools_job_workers = Object.create(null);
+		
+		this.worker_group = null;
+		
+		this.pool_close_count = 0;
+		this.retry_count_connect = this.pool_info.retry_count_connect;
+		
+		this.closed = false;
+		
+		this.connected = false;
+		
+		this.setEvents();
+
+
+		this.events.emit(this.prefix + "open", this);
+				
+		this.doConnect();
+		this.doFreeWorkersToFreePools();
+	}
+	
+	setEvent(event_name, cb, poolIdFl = true) {
+		this.__set_events = this.__set_events || [];
+		
+		let wcb = (obj, ...argv) => {
+			if ( !poolIdFl || this.pools[obj.id] ) {
+				//console.log("> pools "+event_name)
+				cb(obj, ...argv);
+			}
+		};
+		
+		this.__set_events.push({
+			event_name: event_name,
+			cb: wcb,
+		});
+		
+		this.events.on(event_name, wcb);
+	}
+	delEvents() {
+		if ( !this.closed ) {
+			return;
+		}
+		
+		if ( Object.keys(this.pools).length ) {
+			return;
+		}
+		
+		if ( !this.__set_events ) {
+			return;
+		}
+		
+		for(let event of this.__set_events) {
+			//console.log(event.event_name)
+			this.events.removeListener(event.event_name, event.cb);
+		}
+		
+		this.__set_events = null;
+	}
+
+	
+	setEvents() {		
+		this.setEvent("stratum:client:open"           , this.poolOpen         .bind(this));
+		this.setEvent("stratum:client:close"          , this.poolClose        .bind(this));
+		this.setEvent("stratum:client:connect"        , this.poolConnect      .bind(this));
+		this.setEvent("stratum:client:disconnect"     , this.poolDisconnect   .bind(this));
+		this.setEvent("stratum:client:accepted_job"   , this.poolAcceptedJob  .bind(this));
+		
+		this.setEvent("stratum:server:worker:disconnect" , this.workerDisconnect    .bind(this));
+	}
+	
+	poolOpen(origPool) {
+		this.pools_open[origPool.id] = origPool;
+	}
+	poolClose(origPool) {
+		delete this.pools_open[origPool.id];
+		delete this.pools_connect[origPool.id];
+		delete this.pools_job[origPool.id];
+		delete this.pools[origPool.id];
+		
+		this.pool_close_count++;
+		if ( this.pool_close_count >= this.getMaxWorkerCount() ) {
+			this.retry_count_connect--;
+			this.pool_close_count = 0;
+			
+			if ( !this.retry_count_connect ) {
+				this.close("Pool close");
+			}
+		}
+		
+		this.delEvents();
+	}
+	poolConnect(origPool) {
+		this.pools_connect[origPool.id] = origPool;
+	}
+	poolDisconnect(origPool) {
+		delete this.pools_connect[origPool.id];
+		delete this.pools_job[origPool.id];
+	}
+	poolAcceptedJob(origPool) {
+		if ( !this.pools_job[origPool.id] ) {
+			this.pools_job[origPool.id] = new WrapperPool(origPool.id, origPool, {});
+			this.freeWorkersToFreePools();
+			
+			if( Object.keys(this.pools_job).length >= this.getMaxWorkerCount() ) {
+				if ( !this.connected ) {
+					this.events.emit(this.prefix + "connect", this);
+				}
+				this.connected = true;
+			}
+		}
+		
+		this.pools_job[origPool.id].newJob();
+	}
+	
+	workerDisconnect(origWorker) {
+		for(let pool_id in this.pools_job) {
+			this.pools_job[pool_id].delWorker(origWorker.id);
+		}
+	}
+	
+	
+	
+	attachWorkerGroup(workerGroup) {
+		this.detachWorkerGroup();
+		
+		this.worker_group = workerGroup;
+		
+		this.freeWorkersToFreePools();
+	}
+	detachWorkerGroup() {
+		for(let pool_id in this.pools_job) {
+			//console.log('detachWorkerGroup,',pool_id)
+			this.pools_job[pool_id].delWorkers();
+		}
+		
+		if ( !this.worker_group ) {
+			return;
+		}
+
+		this.worker_group.delPools();
+		
+		this.worker_group = null;
+	}
+	
+	freeWorkersToFreePools() {
+		if ( this.closed ) { return; }
+		
+		if ( !this.worker_group ) {
+			return;
+		}
+
+		for(let pool_id in this.pools_job) {
+			let wrapperPool = this.pools_job[pool_id];
+			
+			while(1) {
+				let wrapperWorker = this.worker_group.getFreeWorker();
+				
+				if ( !wrapperWorker ) {
+					return;
+				}
+				
+				if ( !wrapperPool.addWorker(wrapperWorker.id, wrapperWorker) ) {
+					break;
+				}
+				
+				wrapperWorker.addPool(wrapperPool);
+			}
+		}
+	}
+	doFreeWorkersToFreePools() {
+		if ( this.closed ) { return; }
+		
+		this.freeWorkersToFreePools();
+		
+		setTimeout(this.doFreeWorkersToFreePools.bind(this), 1e3);
+	}
+	
+	doConnect() {
+		if ( this.closed ) { return; }
+			
+		let max_worker_count = this.getMaxWorkerCount() || 1;
+
+		let worker_count = max_worker_count - Object.keys(this.pools_open).length;
+		
+		for(let i = 0; i < worker_count; i++) {
+			this.connect();
+		}
+		
+		setTimeout(this.doConnect.bind(this), 2e3);
+	}
+	connect() {
+		let pool_id = Common.getGlobalUniqueId();
+		this.pools[pool_id] = true;
+		
+		new StratumClient(this.pool_info, this.events, this.logger, pool_id);
+	}
+
+	
+	
+	close(error) {
+		if ( this.closed ) {
+			return;
+		}
+		this.closed = true;
+		
+		for(let pool_id in this.pools_open) {
+			this.pools_open[pool_id].close(error);
+		}
+		
+		this.detachWorkerGroup();
+		
+		this.delEvents();
+		
+		if ( this.connected ) {
+			this.connected = false;
+			this.events.emit(this.prefix+"disconnect", this, error);
+		}
+		this.events.emit(this.prefix+"close", this, error);
+	}
+}
+
+class WorkerGroup {
+	constructor(events, logger) {
+		this.id = Common.getGlobalUniqueId();
+		this.events = events;
+		this.logger = logger;
+		
+		this.workers = Object.create(null);
+		
+		
+		
+		this.workerShare = (origWorker, share) => {
+			let wrapperWorker = this.workers[origWorker.id]; if ( !wrapperWorker ) { return; }
+			
+			if ( !wrapperWorker.pool ) { return; }
+			
+			wrapperWorker.pool.submitShare(share);
+		};
+		this.setEvents();
+	}
+	
+	setEvents() {
+		this.events.on("stratum:server:worker:share", this.workerShare);
+	}
+	delEvents() {
+		this.events.removeListener("stratum:server:worker:share", this.workerShare);
+	}
+	
+	getFreeWorker() {
+		for(let worker_id in this.workers) {
+			let wrapperWorker = this.workers[worker_id];
+			if ( !wrapperWorker.pool ) {
+				return wrapperWorker;
+			}
+		}
+		
+		return null;
+	}
+	
+	delPool(pool_id) {
+		for(let worker_id in this.workers) {
+			
+		}
+	}
+	delPools() {
+		for(let worker_id in this.workers) {
+			this.workers[worker_id].pool = null;
+		}		
+	}
+	
+	addWorker(worker_id, worker) {
+		this.workers[worker_id] = worker;
+	}
+	delWorker(worker_id) {
+		let wrapperWorker = this.workers[worker_id];
+		if ( !wrapperWorker ) { return; }
+		
+		if ( wrapperWorker.pool ) {
+			wrapperWorker.pool.delWorker(wrapperWorker.id);
+			wrapperWorker.delPool();
+		}
+		
+		delete this.workers[worker_id];
+	}
+
+	
+	close() {
+		this.delEvents();
 	}
 }
 
@@ -165,6 +498,8 @@ class StratumProxy {
 		
 		this.events = events;
 		
+		this.worker_group = new WorkerGroup(this.events, this.logger);
+		
 		this.pools = {};
 		this.workers = {};
 		
@@ -175,10 +510,12 @@ class StratumProxy {
 		this.freeWorkers = [];
 		
 		this.poolAddCount = 0;
-		
+
+		this.maxWorkerCount = new MaxWorkerCount(this.events);
+
 		this.events.on("stratum:server:worker:connect"         , this.workerConnect      .bind(this));
 		this.events.on("stratum:server:worker:disconnect"      , this.workerDisconnect   .bind(this));
-		this.events.on("stratum:server:worker:share"           , this.workerShare        .bind(this));
+		//this.events.on("stratum:server:worker:share"           , this.workerShare        .bind(this));
 		
 		//this.events.on("stratum:server:worker:login"         , this.workerLogin        .bind(this));
 		//this.events.on("stratum:server:worker:info"          , this.workerInfo         .bind(this));
@@ -195,42 +532,43 @@ class StratumProxy {
 		//this.events.on("stratum:client:rejected_share" , this.poolRejectedShare.bind(this));
 		//this.events.on("stratum:client:ping"           , this.poolPing         .bind(this));
 
-		this.addPoolAuto();
-		setInterval(this.addPoolAuto.bind(this), STRATUM_LOOP_CONNECT_POOL_TIMEOUT);
+		
+		this.pool_group_list = Object.create(null);
+		this.pool_group_active = null;
 		
 		
-		this.events.on("control:pool:connect", (pool) => {
-			this.events.emit("control:pool:disconnect");
+		
+		this.events.on("stratum:client_group:connect", (poolGroup) => {
+			this.pool_group_list[ poolGroup.id ] = poolGroup;
+		});
+		this.events.on("stratum:client_group:close", (poolGroup) => {
+			let pool_group = this.pool_group_list[ poolGroup.id ];
+			if ( pool_group ) {
+				if ( pool_group === this.pool_group_active ) {
+					this.pool_group_active.detachWorkerGroup();
+					this.pool_group_active = null;
+				}
+			}
 			
-			this.pool_connect_info = pool;
-			//this.maxWorkersCount = pool.max_workers || 100;
-			//this.emu_nicehash = pool.emu_nicehash;
-			
-			/// TODO
-			this.maxWorkersCount = 1;
-			
-			this.addPoolAuto();
+			delete this.pool_group_list[ poolGroup.id ];
 		});
 		
-		this.events.on("control:pool:disconnect", () => {
-			for(let i in this.pools) {
-				this.pools[i].pool.disconnect("Switch pool");
-			}
-			for(let i in this.openNoConnectPools) {
-				this.openNoConnectPools[i].disconnect("Switch pool");
-			}
-		
-			//this.openNoConnectPools = {};
-		
-			this.pool_connect_info = null;
+		this.events.on("control:client_group:connect", (pool_info) => {
+			new PoolGroup(pool_info, this.maxWorkerCount.getMaxWorkerCount.bind(this.maxWorkerCount), this.events, this.logger);
 		});
 	
-		setInterval(() => {
-			for(let freeWrapperWorker of this.freeWorkers) {
-		//		freeWrapperWorker.worker.updateJob();
+		this.events.on("control:client_group:active", (pool_group_id) => {
+			if ( this.pool_group_active ) {
+				this.pool_group_active.detachWorkerGroup();
+				this.pool_group_active = null;
 			}
-		}, 20e3);
-		
+			
+			if ( this.pool_group_list[pool_group_id] ) {
+				this.pool_group_active = this.pool_group_list[pool_group_id];
+				this.pool_group_active.attachWorkerGroup(this.worker_group);
+			}
+		});
+	
 		this.startStratumServers();
 	}
 
@@ -252,106 +590,19 @@ class StratumProxy {
 
 
 	
-	freeWorkersToPools() {
-		for(let pool_id in this.pools) {
-			let wrapperPool = this.pools[pool_id];
-		
-			let i;
-			for(i = 0; i < this.freeWorkers.length; i++) {
-				let wrapperWorker = this.freeWorkers[i];
-
-				if ( !wrapperPool.addWorker(wrapperWorker.worker.id, wrapperWorker) ) {
-					break;
-				}
-				
-				this.events.emit(this.prefix + "pool_add_worker", wrapperPool.pool, wrapperWorker.worker);
-				wrapperWorker.addPool(wrapperPool);
-			}
-			
-			this.freeWorkers.splice(0, i);
-		}
-		
-		if ( this.freeWorkers.length ) {
-			//this.addPoolAuto();
-		}
-	}
-	addPoolAuto() {
-		if ( !this.pool_connect_info ) {
-			return;
-		}
-		
-		let poolCount = Math.ceil( this.freeWorkers.length / this.maxWorkersCount );
-		
-		poolCount -= Object.keys(this.openNoConnectPools).length;
-		
-		if ( !Object.keys(this.pools).length && !Object.keys(this.openNoConnectPools).length && !poolCount ) {
-			poolCount++;
-		}
-		
-		while(poolCount-- > 0) {
-			if ( this.pool_connect_info ) {
-				this.connectPool(this.pool_connect_info);
-			}
-		}
-	}
 	
 	
 	workerConnect(worker) {
-		if(0)
-		worker.setJob({
-			extranonce1: "00000000",
-			extranonce2_size: 4,
-			difficulty: 32000,
-			
-			job_id: "d",
-			prevhash: "00".repeat(32),
-			coinb1: "00".repeat(32),
-			coinb2: "00".repeat(32),
-			merkle_branch: [],
-			version: "00".repeat(4),
-			nbits: "00".repeat(4),
-			ntime: "00".repeat(4),
-			clean_jobs: true,	
-		});
-		///
+		let wrapperWorker = new WrapperWorker(worker.id, worker, this.events);
 		
-		//console.log('workerConnect');
+		this.worker_group.addWorker(wrapperWorker.id, wrapperWorker);
 		
-		let wrapperWorker = this.workers[worker.id] = new WrapperWorker(worker.id, worker);
-
-		this.freeWorkers.push(wrapperWorker);
-		
-		this.freeWorkersToPools();
+		if ( this.pool_group_active ) {
+			this.pool_group_active.freeWorkersToFreePools();
+		}
 	}
 	workerDisconnect(worker) {
-		let wrapperWorker = this.workers[worker.id];
-		
-		if ( wrapperWorker ) {
-			if ( wrapperWorker.pool ) {
-				wrapperWorker.pool.delWorker(wrapperWorker.id);
-				this.events.emit(this.prefix + "pool_del_worker", wrapperWorker.pool.pool, wrapperWorker.worker);
-			}
-		}
-		
-		for(let i = 0; i < this.freeWorkers.length; i++) {
-			if ( this.freeWorkers[i].id === wrapperWorker.id ) {
-				this.freeWorkers.splice(i, 1);
-				break;
-			}
-		}
-		
-		delete this.workers[worker.id];
-	}
-	workerGetJob(worker, retJob) {
-		retJob.data = null;
-		
-		let wrapperWorker = this.workers[worker.id];
-		
-		if ( !wrapperWorker || !wrapperWorker.pool ) {
-			return null;
-		}
-
-		retJob.data = wrapperWorker.pool.getJob();
+		this.worker_group.delWorker(worker.id);
 	}
 	workerShare(worker, share) {
 		let wrapperWorker = this.workers[worker.id];
@@ -362,18 +613,8 @@ class StratumProxy {
 		
 		wrapperWorker.pool.submitShare(share);
 	}
-	workerOptions(worker, options) {
-		//worker.emit("app:start", options.options);
-	}
-	workerWorkersInfo(worker, workers_info) {
-		let wrapperWorker = this.workers[worker.id];
-		
-		if ( !wrapperWorker || !wrapperWorker.pool ) {
-			return;
-		}
-		
-		wrapperWorker.pool.jobForWorker(worker.id);
-	}
+	
+	
 	
 	poolOpen(pool) {
 		this.openNoConnectPools[pool.id] = pool;
@@ -385,25 +626,8 @@ class StratumProxy {
 		delete this.openNoConnectPools[pool.id];
 		
 		this.pools[pool.id] = new WrapperPool(pool.id, pool, {maxWorkersCount: this.maxWorkersCount, emu_nicehash: this.emu_nicehash,});
-		
-		this.freeWorkersToPools();
 	}
 	poolDisconnect(pool) {
-		//console.log("poolDisconnect !!! " + pool.id)
-		let wrapperPool = this.pools[pool.id];
-
-		if ( wrapperPool ) {
-			for(let i in wrapperPool.workers) {
-				let wrapperWorker = wrapperPool.workers[i];
-				wrapperWorker.pool = null;
-				this.freeWorkers.push(wrapperWorker);
-	
-				this.events.emit(this.prefix + "pool_del_worker", wrapperPool.pool, wrapperWorker.worker);
-			}
-			
-			wrapperPool.clear();
-		}
-		
 		delete this.pools[pool.id];
 	}
 	poolAcceptedJob(pool, job) {
@@ -413,17 +637,6 @@ class StratumProxy {
 			wrapperPool.newJob(job);
 		}
 	}
-
-	
-	connectPool(pool_info) {
-		/*
-		this.logger.notice("Pool address   > " + Logger.LOG_COLOR_MAGENTA + this.pool_host + ":" + this.pool_port);
-		this.logger.notice("Pool password  > " + Logger.LOG_COLOR_MAGENTA + this.options.pool_password);
-		this.logger.notice("Wallet address > " + Logger.LOG_COLOR_MAGENTA + this.options.wallet_address);
-		*/
-		let pool = new StratumClient(pool_info, this.events, this.logger);
-	}
-
 
 }
 

@@ -22,8 +22,8 @@ define(["app/Common", "app/CommonView", "app/UnPackArray"], function(Common, Com
 		});
 		
 		
-		socketIo.on("control:settings", function(settings) {
-			self.vmSettingsDevFee.dev_time = !!settings.dev_time;
+		socketIo.on("web:control:server:settings:dev_time:update", function(dev_time) {
+			self.vmSettingsDevFee.dev_time = dev_time;
 		});
 	}
 

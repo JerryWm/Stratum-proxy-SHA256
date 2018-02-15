@@ -9,6 +9,7 @@ define([
 	"app/GlobalHashRate",
 	"app/Settings", 
 	"app/SettingsWorkers",
+	"app/SettingsPoolGroupList",
 	"app/VueComponents/SettingsPool",
 	"app/Auth",
 	"app/Init",
@@ -24,6 +25,7 @@ define([
 	GlobalHashRate,
 	Settings, 
 	SettingsWorkers,
+	SettingsPoolGroupList,
 	_VueComponentSettingsPool,
 	Auth,
 	Init,
@@ -93,6 +95,7 @@ define([
 
 		this.settings = new Settings(this.socketIo);
 		this.settingsWorkers = new SettingsWorkers(this.socketIo);
+		this.settingsPoolGroupList = new SettingsPoolGroupList(this.socketIo);
 		
 		var self = this;
 		

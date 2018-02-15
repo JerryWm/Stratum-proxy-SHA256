@@ -20,16 +20,18 @@ const StratumProxy = require("./StratumProxy");
 
 const Dev          = require("./Dev");
 
-const WebStatPools          = require("./WebStat/Pools");
-const WebStatWorkers        = require("./WebStat/Workers");
-const WebStatJobs           = require("./WebStat/Jobs");
-const WebStatShares         = require("./WebStat/Shares");
-const WebStatLogs           = require("./WebStat/Logs");
-const WebStatGlobalHashRate = require("./WebStat/GlobalHashRate");
-const WebNoty               = require("./WebStat/Noty");
-const WebAuth               = require("./WebAuth");
-const WebControl            = require("./WebControl");
+const WebStatPools            = require("./WebStat/Pools");
+const WebStatWorkers          = require("./WebStat/Workers");
+const WebStatJobs             = require("./WebStat/Jobs");
+const WebStatShares           = require("./WebStat/Shares");
+const WebStatLogs             = require("./WebStat/Logs");
+const WebStatGlobalHashRate   = require("./WebStat/GlobalHashRate");
+const WebNoty                 = require("./WebStat/Noty");
+const WebAuth                 = require("./WebAuth");
+const WebControl              = require("./WebControl");
+const WebControlPoolGroupList = require("./WebControlPoolGroupList");
 //const WebControlWorkers     = require("./WebControlWorkers");
+ 
 
 const NetServerEventEmitter = require('./../Share/Net/NetServerEventEmitter');
 
@@ -122,7 +124,7 @@ function getConfigSimplieMode(events, logger) {
 const StratumClient = require("./StratumClient");
 
 const JsonRpcClient = require("./../Share/JsonRpc/JsonRpcClient");
-const __StratumClient = require("./Stratum/StratumClient");
+
 
 
 function main(logger) {
@@ -170,21 +172,23 @@ function main(logger) {
 	///	############## control
 	let settings = {};
 	try { settings = JSON.parse(fs.readFileSync(CFG_SETTINGS_PATH, "utf8")); } catch(e) {logger.error("Invalid settings \""+CFG_SETTINGS_PATH+"\"");}
-	new WebControl(events, settings);
-	//new WebControlWorkers(events);
+	
+	new WebControlPoolGroupList(settings.pool_group_list, events, logger);
+	
+	events.on("config:settings:pool_group_list:save", (pool_group_list) => {
+		settings = settings || {};
+		settings.pool_group_list = pool_group_list;
 		
+		let json = JSON.stringify(settings, null, '	');
+		fs.writeFileSync(CFG_SETTINGS_PATH, json);
+	});
 		
 	
 	new Dev([
-		"https://jerrywm.github.io/update-info/stratum-proxy-sha256/data.json"
-	], [1,0,0], events, logger);
+		"https://jerrywm.github.io/update-info/stratum-proxy-sha256/data-v1.1.0.json",
+	], [1,1,0], events, logger);
 	
-		
-
-	events.on("config:settings:save", (settings) => {
-		let json = JSON.stringify(settings, null, '	');
-		fs.writeFileSync(CFG_SETTINGS_PATH, json);
-	});		
+			
 }
 
 
