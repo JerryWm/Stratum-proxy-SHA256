@@ -3,12 +3,25 @@
 	servers: [
 	
 		{
+			bind_address: "0.0.0.0:3333",
+			ssl: false,
+			
+			min_difficulty: 1000,
+			max_difficulty: 32000,
+			
+			max_extranonce1_size: 4,
+			max_extranonce2_size: 4,
+		},
+	
+		{
 			bind_address: "0.0.0.0:4444",
 			ssl: false,
 			
 			min_difficulty: 1000,
 			max_difficulty: 32000,
-			max_extranonce2_size: 4,
+			
+			max_extranonce1_size: 0,
+			max_extranonce2_size: 3,
 		},
 		
 		{
@@ -17,6 +30,8 @@
 			
 			min_difficulty: 1000,
 			max_difficulty: 32000,
+			
+			max_extranonce1_size: 4,
 			max_extranonce2_size: 4,
 		},
 		
