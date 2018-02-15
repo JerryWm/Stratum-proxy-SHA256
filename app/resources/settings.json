@@ -1,4 +1,3 @@
 {
-	"dev_fee": 4,
-	"pools": []
+	"pool_group_list": []
 }
