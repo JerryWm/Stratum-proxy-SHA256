@@ -152,8 +152,10 @@ class StratumClient extends EventEmitter {
 					}
 					
 					if ( !result ) {
-						this.close(`Authentication failed. May be incorrect login(${options.login}) or password(${options.password})`);
-						return;
+						if ( !(result === null && error === null) ) {
+							this.close(`Authentication failed. May be incorrect login(${options.login}) or password(${options.password})`);
+							return;							
+						}
 					}
 						
 					this.once_authorize = true;
@@ -176,6 +178,21 @@ class StratumClient extends EventEmitter {
 			switch(method) {
 				case "mining.ping":
 					cbResponse("pong");
+					break;
+					
+				case "mining.set_difficulty":
+					cbResponse(true);
+					this.onNotify_mining_set_difficulty(params);
+					break;
+					
+				case "mining.notify":
+					cbResponse(true);
+					this.onNotify_mining_notify(params);
+					break;
+					
+				case "mining.set_extranonce":
+					cbResponse(true);
+					this.onNotify_mining_set_extranonce(params);
 					break;
 					
 				default:
