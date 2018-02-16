@@ -274,6 +274,10 @@ class PoolGroup {
 		this.pools_connect[origPool.id] = origPool;
 	}
 	poolDisconnect(origPool) {
+		if ( this.pools_job[origPool.id] ) {
+			this.pools_job[origPool.id].delWorkers();
+		}
+		
 		delete this.pools_connect[origPool.id];
 		delete this.pools_job[origPool.id];
 	}
@@ -515,24 +519,7 @@ class StratumProxy {
 
 		this.events.on("stratum:server:worker:connect"         , this.workerConnect      .bind(this));
 		this.events.on("stratum:server:worker:disconnect"      , this.workerDisconnect   .bind(this));
-		//this.events.on("stratum:server:worker:share"           , this.workerShare        .bind(this));
-		
-		//this.events.on("stratum:server:worker:login"         , this.workerLogin        .bind(this));
-		//this.events.on("stratum:server:worker:info"          , this.workerInfo         .bind(this));
-		//this.events.on("stratum:server:worker:set_difficulty", this.workerSetDifficulty.bind(this));
 
-		
-		this.events.on("stratum:client:open"           , this.poolOpen         .bind(this));
-		this.events.on("stratum:client:close"          , this.poolClose        .bind(this));
-		this.events.on("stratum:client:connect"        , this.poolConnect      .bind(this));
-		this.events.on("stratum:client:disconnect"     , this.poolDisconnect   .bind(this));
-		this.events.on("stratum:client:accepted_job"   , this.poolAcceptedJob  .bind(this));
-	
-		//this.events.on("stratum:client:accepted_share" , this.poolAcceptedShare.bind(this));
-		//this.events.on("stratum:client:rejected_share" , this.poolRejectedShare.bind(this));
-		//this.events.on("stratum:client:ping"           , this.poolPing         .bind(this));
-
-		
 		this.pool_group_list = Object.create(null);
 		this.pool_group_active = null;
 		
@@ -603,39 +590,6 @@ class StratumProxy {
 	}
 	workerDisconnect(worker) {
 		this.worker_group.delWorker(worker.id);
-	}
-	workerShare(worker, share) {
-		let wrapperWorker = this.workers[worker.id];
-		
-		if ( !wrapperWorker || !wrapperWorker.pool ) {
-			return;
-		}
-		
-		wrapperWorker.pool.submitShare(share);
-	}
-	
-	
-	
-	poolOpen(pool) {
-		this.openNoConnectPools[pool.id] = pool;
-	}
-	poolClose(pool) {
-		delete this.openNoConnectPools[pool.id];
-	}
-	poolConnect(pool) {
-		delete this.openNoConnectPools[pool.id];
-		
-		this.pools[pool.id] = new WrapperPool(pool.id, pool, {maxWorkersCount: this.maxWorkersCount, emu_nicehash: this.emu_nicehash,});
-	}
-	poolDisconnect(pool) {
-		delete this.pools[pool.id];
-	}
-	poolAcceptedJob(pool, job) {
-		let wrapperPool = this.pools[pool.id];
-
-		if ( wrapperPool ) {
-			wrapperPool.newJob(job);
-		}
 	}
 
 }
