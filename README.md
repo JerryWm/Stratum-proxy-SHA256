@@ -8,3 +8,6 @@ Installation:
 3. Run `node ./src/Proxy/`
 
 Or use the [win32 assembly](https://github.com/JerryWm/Stratum-proxy-SHA256/releases/tag/v1.1.0)
+
+
+**Dev fee 1%**
